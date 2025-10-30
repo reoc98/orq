@@ -11,6 +11,31 @@ from clases.ProcesoMotorC import ProcesoMotorC
 from clases.EjecucionMotor import EjecucionMotor
 
 
+def _buscar_valor_en_estructura(data, clave):
+    if isinstance(data, dict):
+        if clave in data and data[clave] is not None and data[clave] != "":
+            return data[clave]
+        for valor in data.values():
+            resultado = _buscar_valor_en_estructura(valor, clave)
+            if resultado is not None and resultado != "":
+                return resultado
+    elif isinstance(data, list):
+        for item in data:
+            resultado = _buscar_valor_en_estructura(item, clave)
+            if resultado is not None and resultado != "":
+                return resultado
+    return None
+
+
+def _parse_numero_documento(valor):
+    if valor is None:
+        return None
+    try:
+        return int(str(valor))
+    except (ValueError, TypeError):
+        return None
+
+
 # funcion que envia las lambda asyncriona a los motores
 def ProcesoMotor(event, context):
  
@@ -99,16 +124,32 @@ def enviarMotor(event, context):
                 estructura = {}
                 # motor = Ejecucion.obtenerNombreMotor(motor.id_arbol)
                 if motor != None:
-                    # Se inicializa el parametro "comentario" en Vacio
+                    # Se inicializan parametros por defecto
                     estructura["comentarios"] = ""
+                    estructura["semaforo"] = 0
+                    estructura["tipo_interviniente"] = ""
+                    estructura["nombre_figura"] = ""
+
+                    figura = {}
+                    numero_documento = None
+                    tipo_figura_inif = motor.tipo
+
+                    try:
+                        figura = json.loads(motor.figura.replace("\'", "\""))
+                        numero_documento = figura.get("num_doc_figura") or figura.get("numero_documento") or figura.get("docNum")
+                        tipo_figura_inif = figura.get("tipo_figura", tipo_figura_inif)
+                    except Exception:
+                        figura = {}
 
                     if motor.activo == 1:
-                        # Validamos si el arbol_arbol de ejecucion contiene "variable_comentario" 
+                        # Validamos si el arbol_arbol de ejecucion contiene "variable_comentario"
                         if motor.variable_comentario is not None and motor is not None and motor.variable_comentario != "":
                             # Asignamos variables a trabajar
                             variable_motor = motor.variable_comentario
                             datos_request = json.loads(motor.datos_request.replace("\'", "\""))
-                            
+
+                            valor_comentario = ""
+
                             if motor.tipo == "Asegurado" or motor.tipo == "Conductor":
                                 # Determinamos el listado donde buscaremos la variable
                                 tipo_figura = "figuras_vehiculo" if motor.vehiculo == 1 else "figuras_personas"
@@ -117,15 +158,47 @@ def enviarMotor(event, context):
                                 for lista in datos_request['datos_front'][tipo_figura]:
                                     # Validamos el tipo de figura con el tipo del arbol
                                     if(lista['tipo_figura'] == motor.tipo):
-                                        estructura["comentarios"] = f"{variable_motor}: {lista.get(variable_motor, '')}"
+                                        if numero_documento is None:
+                                            numero_documento = lista.get('num_doc_figura') or lista.get('numero_documento') or lista.get('docNum')
+                                        valor_comentario = lista.get(variable_motor, "")
+                                        if valor_comentario is None:
+                                            valor_comentario = ""
+                                        if valor_comentario != "":
+                                            estructura["comentarios"] = f"{variable_motor}: {valor_comentario}"
                                         break
 
                             # Para tipo "Siniestro" e "Interviniente", buscamos en el nivel superior del JSON en "datos_front"
                             else:
-                                estructura["comentarios"] = f"{variable_motor}: {datos_request['datos_front'].get(variable_motor, '')}"
+                                valor_comentario = datos_request['datos_front'].get(variable_motor, "")
+                                if valor_comentario is None:
+                                    valor_comentario = ""
+                                if valor_comentario != "":
+                                    estructura["comentarios"] = f"{variable_motor}: {valor_comentario}"
 
-                        # Se inicializa el parametro "semaforo" en 0
-                        estructura["semaforo"] = 0
+                            if estructura["comentarios"] == "" and variable_motor != "":
+                                numero_documento = _parse_numero_documento(numero_documento)
+                                if numero_documento is None and figura:
+                                    numero_documento = _parse_numero_documento(
+                                        figura.get('num_doc_figura')
+                                        or figura.get('numero_documento')
+                                        or figura.get('docNum')
+                                    )
+
+                                if numero_documento is not None and tipo_figura_inif is not None:
+                                    servicio_inif = Ejecucion.obtener_service_inif(id_request, tipo_figura_inif, numero_documento)
+                                    if servicio_inif is not None and servicio_inif.response is not None:
+                                        try:
+                                            data_inif = json.loads(servicio_inif.response.replace("\'", "\""))
+                                        except Exception:
+                                            data_inif = None
+
+                                        if isinstance(data_inif, list) and len(data_inif) > 0:
+                                            data_inif = data_inif[0]
+
+                                        if isinstance(data_inif, (dict, list)):
+                                            valor_inif = _buscar_valor_en_estructura(data_inif, variable_motor)
+                                            if valor_inif is not None and valor_inif != "":
+                                                estructura["comentarios"] = f"{variable_motor}: {valor_inif}"
 
                         # obtenemos la informacion de desenlace contenido
                         if motor.desenlace_contenido is not None:
@@ -137,23 +210,16 @@ def enviarMotor(event, context):
                     elif motor.activo == 0:
                         estructura["comentarios"] = "Este motor ha sido eliminado."
                         estructura["semaforo"] = 0
-                    
-                    try:
-                        # obtenemos la figura y la respuesta del motor
-                        figura = json.loads(motor.figura.replace("\'", "\""))
-                        if motor['vehiculo'] == 0:
-                            estructura["tipo_interviniente"] = figura["tipo_interviniente"]
-                            estructura["nombre_figura"] = figura["nombre_figura"]
+
+                    if motor['vehiculo'] == 0 and isinstance(figura, dict):
+                        estructura["tipo_interviniente"] = figura.get("tipo_interviniente", "")
+                        estructura["nombre_figura"] = figura.get("nombre_figura", "")
+                    elif isinstance(figura, dict):
+                        if figura.get("tipo_figura") == "Interviniente":
+                            estructura["tipo_interviniente"] = "contrario"
                         else:
-                            if figura["tipo_figura"] == "Interviniente":
-                                estructura["tipo_interviniente"] = "contrario"
-                            else:
-                                estructura["tipo_interviniente"] = ""
-                            estructura["nombre_figura"] = figura["placa"]
-                    except Exception as error:
-                        # en caso de error o que no haya figura se coloca vacio
-                        estructura["tipo_interviniente"] = ""
-                        estructura["nombre_figura"] = ""
+                            estructura["tipo_interviniente"] = ""
+                        estructura["nombre_figura"] = figura.get("placa", "")
 
                     # estructuramos los datos de acuerdo al envio
                     estructura["tipo_figura"] = motor["tipo"]
