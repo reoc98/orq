@@ -1,0 +1,96 @@
+service: allianz-orq-motor
+frameworkVersion: "3"
+
+package:
+  patterns:
+    - "!node_modules/**"
+    - "!package-lock.json"
+    - "!package.json"
+
+
+provider:
+  name: aws
+  runtime: python3.9
+  # profile: deploy
+  stage: ${sls:stage}
+  region: us-east-1
+  deploymentBucket: 
+    name: ${self:params.envSecret.bucket_deploy}
+  timeout: 25
+  layers:
+    - arn:aws:lambda:${aws:region}:${aws:accountId}:layer:DependenciasOrquestador:${self:params.envSecret.orqLayerVersion}
+    - arn:aws:lambda:${aws:region}:${aws:accountId}:layer:OpenSSLDependencesOrq:${self:params.envSecret.openSSLLayerVersion}
+  
+  iam:
+    role:
+      statements:
+        - Effect: "Allow"
+          Action:
+            - "secretsmanager:GetSecretValue"
+            - "s3:GetObject"
+          Resource: "*"
+        - Effect: "Allow"
+          Action:
+            - lambda:InvokeFunction
+          Resource: "*" 
+  environment:
+    STAGE: ${self:provider.stage}
+    REGION: ${self:provider.region}
+    TMP: "/tmp/"
+
+  vpc:
+    securityGroupIds:
+      - ${self:params.envSecret.securityGroupId}
+    subnetIds:
+      - ${self:params.envSecret.subnetId1}
+      - ${self:params.envSecret.subnetId2}
+
+  httpApi:
+    authorizers:
+      someJwtAuthorizerOrq:
+        type: jwt
+        identitySource: $request.header.Authorization
+        issuerUrl: https://cognito-idp.${aws:region}.amazonaws.com/${self:params.envSecret.cognitoPoolId}
+        audience: ${self:params.envSecret.clienteId}
+    cors: true
+params:
+  envSecret: ${ssm:/aws/reference/secretsmanager/${self:provider.stage}/secret-orquestador}
+
+functions:
+  ProcesoMotor:
+    handler: handler.ProcesoMotor
+    events:
+      - schedule:
+          enabled: true
+          rate: cron(20/15 04-16 ? * * *)
+    timeout: 900
+    maximumRetryAttempts: 0
+
+  ejecucionMotor:
+    handler: handler.ejecucionMotor
+    timeout: 900
+
+  validarMotor:
+    handler: handler.validarMotor
+    events:
+      - schedule:
+          enabled: true
+          rate: cron(25/15 04-16 ? * * *)
+    timeout: 900
+    maximumRetryAttempts: 0
+
+  enviarMotor:
+    handler: handler.enviarMotor
+    events:
+      - schedule:
+          enabled: true
+          rate: cron(30/15 04-16 ? * * *)
+    timeout: 900
+    maximumRetryAttempts: 0
+
+  consumo_serv_motor:
+    handler: handler.consumo_motor
+    timeout: 900
+
+# plugins:
+#   - serverless-offline

@@ -1,0 +1,85 @@
+service: allianz-orq-variables
+frameworkVersion: "3"
+
+package:
+  patterns:
+    - "!node_modules/**"
+    - "!package-lock.json"
+    - "!package.json"
+
+provider:
+  name: aws
+  runtime: python3.9
+  # profile: deploy
+  stage: ${sls:stage}
+  region: us-east-1
+  deploymentBucket: 
+    name: ${self:params.envSecret.bucket_deploy}
+  timeout: 25
+  layers:
+    - arn:aws:lambda:${aws:region}:${aws:accountId}:layer:DependenciasOrquestador:${self:params.envSecret.orqLayerVersion}
+  
+  iam:
+    role:
+      statements:
+        - Effect: "Allow"
+          Action:
+            - "secretsmanager:GetSecretValue"
+          Resource: "*"
+  environment:
+    STAGE: ${self:provider.stage}
+
+  vpc:
+    securityGroupIds:
+      - ${self:params.envSecret.securityGroupId}
+    subnetIds:
+      - ${self:params.envSecret.subnetId1}
+      - ${self:params.envSecret.subnetId2}
+
+  httpApi:
+    authorizers:
+      someJwtAuthorizerOrq:
+        type: jwt
+        identitySource: $request.header.Authorization
+        issuerUrl: https://cognito-idp.${aws:region}.amazonaws.com/${self:params.envSecret.cognitoPoolId}
+        audience: ${self:params.envSecret.clienteId}
+    cors: true
+params:
+  envSecret: ${ssm:/aws/reference/secretsmanager/${self:provider.stage}/secret-orquestador}
+
+functions:
+  variable:
+    handler: handler.variable
+    events:
+      - httpApi:
+          path: /variable
+          method: post
+          authorizer:
+            name: someJwtAuthorizerOrq
+
+  variableRisk:
+    handler: handler.variableRisk
+    events:
+      - httpApi:
+          path: /variableRisk
+          method: post
+          authorizer:
+            name: someJwtAuthorizerOrq
+
+  validarPoliza:
+    handler: handler.validarPoliza
+    events:
+      - httpApi:
+          path: /validarPoliza
+          method: post
+          authorizer:
+            name: someJwtAuthorizerOrq
+
+  get_response_inif:
+    handler: handler.get_response_inif
+    events:
+      - httpApi:
+          path: /get_response_inif
+          method: post
+          authorizer:
+            name: someJwtAuthorizerOrq

@@ -1,0 +1,171 @@
+{
+    "create_motor": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "type": "object",
+        "properties": {
+            "op": {
+                "type": "integer",
+                "minLength": 1
+            },
+            "datos": {
+                "type": "object",
+                "properties": {
+                    "datos_configuracion": {
+                        "type": "object",
+                        "properties": {
+                            "codigo": {
+                                "type": "string",
+                                "pattern": "^[a-zA-Z0-9]*$",
+                                "minLength": 6,
+                                "maxLength": 6
+                            },
+                            "descripcion": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 150
+                            },
+                            "nombre": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 150
+                            },
+                            "tipo_variable_id": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 2
+                            },
+                            "padre": {
+                                "type": "integer",
+                                "minLength": 1,
+                                "maxLength": 2
+                            }
+                        },
+                        "required": [
+                            "codigo",
+                            "descripcion",
+                            "nombre",
+                            "tipo_variable_id",
+                            "padre"
+                        ]
+                    },
+                    "arbol_estructura": {
+                        "type": "object"
+                    },
+                    "datos_relacion":{
+                        "type": "object",
+                        "properties": {
+                            "figura": {
+                                "type": "integer",
+                                "minLength": 1
+                            },
+                            "tipo_motor": {
+                                "type": "integer",
+                                "minLength": 1
+                            },
+                            "variable": {
+                                "type": "integer",
+                                "minLength": 1
+                            },
+                            "fuente": {
+                                "type": "integer",
+                                "minLength": 1
+                            },
+                            "lista_risk": {
+                                "type": "integer",
+                                "minLength": 1
+                            }
+                        },
+                        "required": [
+                            "figura",
+                            "tipo_motor",
+                            "variable",
+                            "fuente",
+                            "lista_risk"
+                        ]
+                    },
+                    "usuario_id": {
+                        "type": "integer",
+                        "minLength": 1
+                    }
+                },
+                "required": [
+                    "datos_configuracion",
+                    "arbol_estructura",
+                    "usuario_id"
+                ]
+            }
+        },
+        "required": [
+            "op",
+            "datos"
+        ]
+    },
+    "select_motor": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "type": "object",
+        "properties": {
+            "type": {
+                "type": "string",
+                "enum": ["variable", "figura", "fuente", "lista_risk", "tipo_motor"],
+                "minLength": 1
+            }
+        },
+        "required": [
+            "type"
+        ]
+    },
+    "delete_motor": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "type": "object",
+        "properties": {
+            "op": {
+                "type": "integer",
+                "minLength": 1,
+                "maxLength": 1
+            },
+            "arbol_id": {
+                "type": "integer",
+                "minLength": 1
+            },
+            "usuario_id": {
+                "type": "integer",
+                "minLength": 1
+            },
+            "comentario": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 150
+            }
+        },
+        "required": [
+            "op",
+            "arbol_id",
+            "usuario_id",
+            "comentario"
+        ]
+    },
+    "delete_arbol": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "type": "object",
+        "properties": {
+            "arbol_id": {
+                "type": "integer",
+                "minLength": 1
+            },
+            "usuario_id": {
+                "type": "integer",
+                "minLength": 1
+            },
+            "comentario": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 150
+            }
+        },
+        "required": [
+            "arbol_id",
+            "usuario_id",
+            "comentario"
+        ]
+    }
+}

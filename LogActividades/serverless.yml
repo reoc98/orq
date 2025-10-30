@@ -1,0 +1,132 @@
+service: allianz-orq-log-actividades
+frameworkVersion: "3"
+
+package:
+  patterns:
+    - "!node_modules/**"
+    - "!package-lock.json"
+    - "!package.json"
+
+provider:
+  name: aws
+  runtime: python3.9
+  # profile: deploy
+  stage: ${sls:stage}
+  region: us-east-1
+  timeout: 25
+  layers:
+    - arn:aws:lambda:${aws:region}:${aws:accountId}:layer:DependenciasOrquestador:${self:params.envSecret.orqLayerVersion}
+  
+  iam:
+    role:
+      statements:
+        - Effect: "Allow"
+          Action:
+            - "secretsmanager:GetSecretValue"
+          Resource: "*"
+  environment:
+    STAGE: ${self:provider.stage}
+
+  vpc:
+    securityGroupIds:
+      - ${self:params.envSecret.securityGroupId}
+    subnetIds:
+      - ${self:params.envSecret.subnetId1}
+      - ${self:params.envSecret.subnetId2}
+
+  httpApi:
+    authorizers:
+      someJwtAuthorizerOrq:
+        type: jwt
+        identitySource: $request.header.Authorization
+        issuerUrl: https://cognito-idp.${aws:region}.amazonaws.com/${self:params.envSecret.cognitoPoolId}
+        audience: ${self:params.envSecret.clienteId}
+    cors: true
+params:
+  envSecret: ${ssm:/aws/reference/secretsmanager/${self:provider.stage}/secret-orquestador}
+
+functions:
+  get_users_log:
+    handler: handler.get_users_log
+    events:
+      - httpApi:
+          path: /get_users_log
+          method: get
+          authorizer:
+            name: someJwtAuthorizerOrq
+
+  get_profiles_log:
+    handler: handler.get_profiles_log
+    events:
+      - httpApi:
+          path: /get_profiles_log
+          method: get
+          authorizer:
+            name: someJwtAuthorizerOrq
+  
+  get_users_affected:
+    handler: handler.get_users_affected
+    events:
+      - httpApi:
+          path: /get_users_affected
+          method: get
+          authorizer:
+            name: someJwtAuthorizerOrq
+
+  get_activity_type:
+    handler: handler.get_activity_type
+    events:
+      - httpApi:
+          path: /get_activity_type
+          method: post
+          authorizer:
+            name: someJwtAuthorizerOrq
+  
+  create_filter:
+    handler: handler.create_filter
+    events:
+      - httpApi:
+          path: /create_filter
+          method: post
+          authorizer:
+            name: someJwtAuthorizerOrq
+
+  get_activity:
+    handler: handler.get_activity
+    events:
+      - httpApi:
+          path: /get_activity
+          method: post
+          authorizer:
+            name: someJwtAuthorizerOrq
+  
+  get_period:
+    handler: handler.get_period
+    events:
+      - httpApi:
+          path: /get_period
+          method: get
+          authorizer:
+            name: someJwtAuthorizerOrq
+
+  get_motores:
+    handler: handler.get_motores
+    events:
+      - httpApi:
+          path: /get_motores
+          method: get
+          authorizer:
+            name: someJwtAuthorizerOrq
+
+  get_arboles:
+    handler: handler.get_arboles
+    events:
+      - httpApi:
+          path: /get_arboles
+          method: get
+          authorizer:
+            name: someJwtAuthorizerOrq
+
+
+# plugins:
+#   - serverless-offline

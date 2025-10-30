@@ -1,0 +1,181 @@
+service: allianz-orq-usuarios
+frameworkVersion: '3'
+
+package:
+  patterns:
+    - "!dev_env/**"
+    - "!.serverless/**"
+    - "!node_modules/**"
+    - "!.vscode/**"
+    - "!__pycache__/**"
+    - "!package-lock.json"
+    - "!package.json"
+    - "!RUN_MODULE.bat"
+    - "!venv/**"
+
+provider:
+  name: aws
+  runtime: python3.9
+  # profile: deploy
+  stage: ${sls:stage}
+  region: us-east-1
+  timeout: 25
+  layers:
+    - arn:aws:lambda:${aws:region}:${aws:accountId}:layer:DependenciasOrquestador:${self:params.envSecret.orqLayerVersion}
+  
+  iam:
+    role:
+      statements:
+        - Effect: "Allow"
+          Action:
+            - "secretsmanager:GetSecretValue"
+            - "cognito-idp:AdminDeleteUser"
+            - "cognito-idp:AdminUpdateUserAttributes"
+            - "cognito-idp:AdminDisableUser"
+            - "cognito-idp:AdminEnableUser"
+            - "cognito-idp:AdminSetUserPassword"
+          Resource: "*"
+        - Effect: Allow
+          Action:
+            - lambda:InvokeFunction
+            - "s3:*"
+          Resource: "*"
+  vpc:
+    securityGroupIds:
+      - ${self:params.envSecret.securityGroupId}
+    subnetIds:
+      - ${self:params.envSecret.subnetId1}
+      - ${self:params.envSecret.subnetId2}
+  httpApi:
+    authorizers:
+      someJwtAuthorizerOrq:
+        type: jwt
+        identitySource: $request.header.Authorization
+        issuerUrl: https://cognito-idp.${aws:region}.amazonaws.com/${self:params.envSecret.cognitoPoolId}
+        audience: ${self:params.envSecret.clienteId}
+    cors: true
+  
+  environment:
+    SERVICE: ${self:service}
+    STAGE: ${self:provider.stage}
+    REGION: ${self:provider.region}
+
+params:
+  envSecret: ${ssm:/aws/reference/secretsmanager/${self:provider.stage}/secret-orquestador}
+
+functions:
+  create_user:
+    handler: handler.create_user
+    environment:
+      COGNITO_CLIENT_ID: ${self:params.envSecret.clienteId}
+    events:
+      - httpApi:
+          path: /create_user
+          method: post
+          authorizer:
+            name: someJwtAuthorizerOrq
+
+  valid_link:
+    handler: handler.valid_link
+    environment:
+      COGNITO_CLIENT_ID: ${self:params.envSecret.clienteId}
+    events:
+      - httpApi:
+          path: /valid_link
+          method: post
+
+  set_password:
+    handler: handler.set_password
+    environment:
+      COGNITO_CLIENT_ID: ${self:params.envSecret.clienteId}
+      COGNITO_USER_POOL_ID: ${self:params.envSecret.cognitoPoolId}
+    events:
+      - httpApi:
+          path: /set_password
+          method: post
+
+  # PreSignUpOrquestador:
+  #   name: PreSignUpOrquestador
+  #   handler: handler.PreSignUpOrquestador
+
+
+  get_users:
+    handler: handler.get_users
+    environment:
+      COGNITO_CLIENT_ID: ${self:params.envSecret.clienteId}
+    events:
+      - httpApi:
+          path: /get_users
+          method: post
+          authorizer:
+            name: someJwtAuthorizerOrq
+
+  get_user:
+    handler: handler.get_user
+    environment:
+      COGNITO_CLIENT_ID: ${self:params.envSecret.clienteId}
+    events:
+      - httpApi:
+          path: /get_user
+          method: post
+          authorizer:
+            name: someJwtAuthorizerOrq
+
+  get_perfiles:
+    handler: handler.get_perfiles
+    environment:
+      COGNITO_CLIENT_ID: ${self:params.envSecret.clienteId}
+    events:
+      - httpApi:
+          path: /get_perfiles
+          method: get
+          authorizer:
+            name: someJwtAuthorizerOrq
+
+  get_state_users:
+    handler: handler.get_state_users
+    environment:
+      COGNITO_CLIENT_ID: ${self:params.envSecret.clienteId}
+    events:
+      - httpApi:
+          path: /get_state_users
+          method: get
+          authorizer:
+            name: someJwtAuthorizerOrq
+
+  edit_user:
+    handler: handler.edit_user
+    environment:
+      COGNITO_USER_POOL_ID: ${self:params.envSecret.cognitoPoolId}
+    events:
+      - httpApi:
+          path: /edit_user
+          method: put
+          authorizer:
+            name: someJwtAuthorizerOrq
+
+  change_state_user:
+    handler: handler.change_state_user
+    environment:
+      COGNITO_USER_POOL_ID: ${self:params.envSecret.cognitoPoolId}
+    events:
+      - httpApi:
+          path: /change_state_user
+          method: patch
+          authorizer:
+            name: someJwtAuthorizerOrq
+
+  delete_user:
+    handler: handler.delete_user
+    environment:
+      COGNITO_USER_POOL_ID: ${self:params.envSecret.cognitoPoolId}
+    events:
+      - httpApi:
+          path: /delete_user
+          method: patch
+          authorizer:
+            name: someJwtAuthorizerOrq
+
+
+# plugins:
+#   - serverless-offline

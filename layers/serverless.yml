@@ -1,0 +1,48 @@
+service: allianz-orq-layers
+frameworkVersion: "3"
+
+package:
+  patterns:
+    - "!DependenciasOrquestador.zip"
+    - "!ExcelDependencesOrq.zip"
+    - "!OpenSSLDependencesOrq.zip"
+
+layers:
+  DependenciasOrquestador:
+    package:
+      artifact: DependenciasOrquestador.zip
+    description: "librerias para orquestador"
+    compatibleRuntimes:
+      - python3.9
+  
+  ExcelDependencesOrq:
+    package:
+      artifact: ExcelDependencesOrq.zip
+    description: "Librerias para el manejo de excel"
+    compatibleRuntimes:
+      - python3.9
+    compatibleArchitectures:
+      - x86_64
+
+  OpenSSLDependencesOrq:
+    package:
+      artifact: OpenSSLDependencesOrq.zip
+    description: "Librerias de OpenSSL"
+    compatibleRuntimes:
+      - python3.9
+    compatibleArchitectures:
+      - x86_64
+
+provider:
+  name: aws
+  runtime: python3.9
+  stage: ${sls:stage}
+  region: us-east-1
+  deploymentBucket: 
+    name: ${self:params.envSecret.bucket_deploy}
+  layers:
+    - { Ref: DependenciasOrquestadorLambdaLayer }
+    - { Ref: ExcelDependencesOrqLambdaLayer }
+    - { Ref: OpenSSLDependencesOrqLambdaLayer }
+params:
+  envSecret: ${ssm:/aws/reference/secretsmanager/${self:provider.stage}/secret-orquestador}

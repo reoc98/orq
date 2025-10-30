@@ -1,0 +1,61 @@
+service: allianz-orq-mailgun
+frameworkVersion: '3'
+
+package:
+  patterns:
+    - "!__pycache__/**"
+
+provider:
+  name: aws
+  runtime: python3.9
+  stage: ${sls:stage}
+  region: us-east-1
+
+  iam:
+    role:
+      statements:
+        - Effect: "Allow"
+          Action:
+            - "secretsmanager:GetSecretValue"
+          Resource: "*"
+
+  httpApi:
+    authorizers:
+      someJwtAuthorizerOrq:
+        type: jwt
+        identitySource: $request.header.Authorization
+        issuerUrl: https://cognito-idp.${aws:region}.amazonaws.com/${self:params.envSecret.cognitoPoolId}
+        audience: ${self:params.envSecret.clienteId}
+    cors: true
+
+  vpc:
+    securityGroupIds:
+      - ${self:params.envSecret.securityGroupId}
+    subnetIds:
+      - ${self:params.envSecret.subnetId1}
+      - ${self:params.envSecret.subnetId2}
+  
+  layers:
+    - arn:aws:lambda:${aws:region}:${aws:accountId}:layer:DependenciasOrquestador:${self:params.envSecret.orqLayerVersion}
+  
+  environment:
+    STAGE: ${self:provider.stage}
+    APP: -orq
+    COGNITO_CLIENT_ID: ${self:params.envSecret.clienteId}
+    COGNITO_USER_POOL_ID: ${self:params.envSecret.cognitoPoolId}
+
+params:
+  envSecret: ${ssm:/aws/reference/secretsmanager/${self:provider.stage}/secret-orquestador}
+
+functions:
+  send_email:
+    handler: handler.send_email
+    events:
+      - httpApi:
+          path: /send_email
+          method: post
+          authorizer:
+            name: someJwtAuthorizerOrq
+
+plugins:
+  - serverless-offline

@@ -1,0 +1,220 @@
+service: allianz-orq-reportes
+frameworkVersion: "3"
+
+package:
+  patterns:
+    - "!node_modules/**"
+    - "!package-lock.json"
+    - "!package.json"
+    - "!dev_env/**"
+
+provider:
+  name: aws
+  runtime: python3.9
+  stage: ${sls:stage}
+  region: us-east-1
+  timeout: 30
+  layers:
+    - arn:aws:lambda:${aws:region}:${aws:accountId}:layer:DependenciasOrquestador:${self:params.envSecret.orqLayerVersion}
+    - arn:aws:lambda:${aws:region}:${aws:accountId}:layer:ExcelDependencesOrq:${self:params.envSecret.excelLayerVersion}
+
+  iam:
+    role:
+      statements:
+        - Effect: "Allow"
+          Action:
+            - "secretsmanager:GetSecretValue"
+          Resource: "*"
+        - Effect: "Allow"
+          Action:
+            - lambda:InvokeFunction
+          Resource: "*" 
+        - Effect: "Allow"
+          Action:
+            - "s3:PutObject"
+            - 's3:GetObject'
+          Resource: "*"
+  environment:
+    STAGE: ${self:provider.stage}
+    REGION: ${self:provider.region}
+    SERVICE: ${self:service}
+    TMP: "/tmp/"
+
+  vpc:
+    securityGroupIds:
+      - ${self:params.envSecret.securityGroupId}
+    subnetIds:
+      - ${self:params.envSecret.subnetId1}
+      - ${self:params.envSecret.subnetId2}
+
+  httpApi:
+    authorizers:
+      someJwtAuthorizerOrq:
+        type: jwt
+        identitySource: $request.header.Authorization
+        issuerUrl: https://cognito-idp.${aws:region}.amazonaws.com/${self:params.envSecret.cognitoPoolId}
+        audience: ${self:params.envSecret.clienteId}
+    cors: true
+    
+params:
+  envSecret: ${ssm:/aws/reference/secretsmanager/${self:provider.stage}/secret-orquestador}
+
+functions:
+  insertarReportes:
+      handler: handler.insertarReportes
+      events:
+        - httpApi:
+            path: /insertar_reportes
+            method: post
+            authorizer:
+              name: someJwtAuthorizerOrq
+
+  generarReporteSiniestro:
+      handler: handler.generarReporteSiniestro
+      timeout: 900
+
+  cancelarReportes:
+      handler: handler.cancelarReportes
+      events:
+        - httpApi:
+            path: /cancelar_reportes
+            method: post
+            authorizer:
+              name: someJwtAuthorizerOrq
+
+  descargarReportes:
+      handler: handler.descargarReportes
+      events:
+        - httpApi:
+            path: /descargar_reportes
+            method: post
+            authorizer:
+              name: someJwtAuthorizerOrq
+
+  get_siniestros:
+    handler: handler.get_siniestros
+    events:
+      - httpApi:
+          path: /get_siniestros
+          method: post
+          authorizer:
+            name: someJwtAuthorizerOrq
+  
+  get_reglas:
+    handler: handler.get_reglas
+    events:
+      - httpApi:
+          path: /get_reglas
+          method: post
+          authorizer:
+            name: someJwtAuthorizerOrq
+
+  get_tipo_fecha:
+    handler: handler.get_tipo_fecha
+    events:
+      - httpApi:
+          path: /get_tipo_fecha
+          method: get
+          authorizer:
+            name: someJwtAuthorizerOrq
+
+  get_ciudades:
+    handler: handler.get_cities
+    events:
+      - httpApi:
+          path: /get_ciudades
+          method: post
+          authorizer:
+            name: someJwtAuthorizerOrq
+
+  get_departamentos:
+    handler: handler.get_departments
+    events:
+      - httpApi:
+          path: /get_departments
+          method: get
+          authorizer:
+            name: someJwtAuthorizerOrq
+
+  ReporteMensualSiniestros:
+    handler: handler.ReporteMensualSiniestros
+    events:
+      - httpApi:
+          path: /ReporteMensualSiniestros
+          method: post
+          authorizer:
+            name: someJwtAuthorizerOrq
+
+  get_months:
+    handler: handler.get_months
+    events:
+      - httpApi:
+          path: /get_months
+          method: get
+          authorizer:
+            name: someJwtAuthorizerOrq
+
+  asyncGenerarReporteMensual:
+      handler: handler.asyncGenerarReporteMensual
+      timeout: 900
+
+  validarReporteMensual:
+      handler: handler.validarReporteMensual
+      events:
+        - httpApi:
+            path: /validarReporteMensual
+            method: post
+            authorizer:
+              name: someJwtAuthorizerOrq
+
+  get_select_reglas:
+    handler: handler.get_select_reglas
+    events:
+      - httpApi:
+          path: /get_select_reglas
+          method: get
+          authorizer:
+            name: someJwtAuthorizerOrq
+  
+  async_generar_mensual_reglas:
+    handler: handler.async_generar_mensual_reglas
+    timeout: 900
+
+  reporte_mensual_reglas:
+    handler: handler.reporte_mensual_reglas
+    events:
+      - httpApi:
+          path: /reporte_mensual_reglas
+          method: post
+          authorizer:
+            name: someJwtAuthorizerOrq
+
+  validar_reporte_reglas:
+      handler: handler.validar_reporte_reglas
+      events:
+        - httpApi:
+            path: /validar_reporte_reglas
+            method: post
+            authorizer:
+              name: someJwtAuthorizerOrq
+
+  get_years_rules:
+    handler: handler.get_years
+    events:
+      - httpApi:
+          path: /get_years
+          method: get
+          authorizer:
+            name: someJwtAuthorizerOrq
+
+  descargar_reporte_mensual:
+    handler: handler.download_report_monthly
+    events:
+      - httpApi:
+          path: /descargar_reporte_mensual
+          method: post
+          authorizer:
+            name: someJwtAuthorizerOrq
+  
+# plugins:
+#   - serverless-offline

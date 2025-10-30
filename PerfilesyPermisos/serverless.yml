@@ -1,0 +1,133 @@
+service: allianz-orq-perfiles-permisos
+frameworkVersion: "3"
+
+package:
+  patterns:
+    - "!node_modules/**"
+    - "!package-lock.json"
+    - "!package.json"
+
+
+provider:
+  name: aws
+  runtime: python3.9
+  # profile: deploy
+  stage: ${sls:stage}
+  region: us-east-1
+  timeout: 25
+  layers:
+    - arn:aws:lambda:${aws:region}:${aws:accountId}:layer:DependenciasOrquestador:${self:params.envSecret.orqLayerVersion}
+  
+  iam:
+    role:
+      statements:
+        - Effect: "Allow"
+          Action:
+            - "secretsmanager:GetSecretValue"
+          Resource: "*"
+  environment:
+    STAGE: ${self:provider.stage}
+
+  vpc:
+    securityGroupIds:
+      - ${self:params.envSecret.securityGroupId}
+    subnetIds:
+      - ${self:params.envSecret.subnetId1}
+      - ${self:params.envSecret.subnetId2}
+
+  httpApi:
+    authorizers:
+      someJwtAuthorizerOrq:
+        type: jwt
+        identitySource: $request.header.Authorization
+        issuerUrl: https://cognito-idp.${aws:region}.amazonaws.com/${self:params.envSecret.cognitoPoolId}
+        audience: ${self:params.envSecret.clienteId}
+    cors: true
+params:
+  envSecret: ${ssm:/aws/reference/secretsmanager/${self:provider.stage}/secret-orquestador}
+
+functions:
+  get-modulos:
+    handler: handler.getModulos
+    events:
+      - httpApi:
+          path: /modulos
+          method: get
+          authorizer:
+            name: someJwtAuthorizerOrq
+
+  get-permisos:
+    handler: handler.permisos
+    events:
+      - httpApi:
+          path: /permisos
+          method: get
+          authorizer:
+            name: someJwtAuthorizerOrq
+
+  crear-perfil:
+    handler: handler.crearPerfil
+    events:
+      - httpApi:
+          path: /crearPerfil
+          method: post
+          authorizer:
+            name: someJwtAuthorizerOrq
+  
+  get-perfiles:
+    handler: handler.getPerfiles
+    events:
+      - httpApi:
+          path: /perfiles
+          method: post
+          authorizer:
+            name: someJwtAuthorizerOrq
+
+  get-perfil:
+    handler: handler.getPerfil
+    events:
+      - httpApi:
+          path: /perfil
+          method: post
+          authorizer:
+            name: someJwtAuthorizerOrq
+
+  eliminar-perfil:
+    handler: handler.eliminarPerfil
+    events:
+      - httpApi:
+          path: /eliminarPerfil
+          method: patch
+          authorizer:
+            name: someJwtAuthorizerOrq
+
+  editar-perfil:
+    handler: handler.editarPerfil
+    events:
+      - httpApi:
+          path: /editarPerfil
+          method: put
+          authorizer:
+            name: someJwtAuthorizerOrq
+
+  get-perfil-permisos:
+    handler: handler.getPerfilPermisos
+    events:
+      - httpApi:
+          path: /getPerfilPermisos
+          method: post
+          authorizer:
+            name: someJwtAuthorizerOrq
+
+  validate-permissions:
+    handler: handler.validatePermissions
+    events:
+      - httpApi:
+          path: /validatePermissions
+          method: post
+          authorizer:
+            name: someJwtAuthorizerOrq
+
+
+# plugins:
+#   - serverless-offline

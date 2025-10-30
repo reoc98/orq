@@ -1,0 +1,98 @@
+{
+    "filter_log": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "type": "object",
+        "properties": {
+            "NUM_RESULTADOS": {
+                "type": "integer",
+                "minLength": 1
+            },
+            "PAGINA_ACTUAL": {
+                "type": "integer",
+                "minLength": 1
+            },
+            "ID_USUARIO": {
+                "type": "integer",
+                "minLength": 1
+            },
+            "ID_PERFIL": {
+                "type": "integer",
+                "minLength": 1
+            },
+            "ID_TIPO_ACTIVIDAD_USUARIO": {
+                "type": "integer",
+                "minLength": 1
+            },
+            "ID_TIPO_ACTIVIDAD_PERFIL": {
+                "type": "integer",
+                "maxLength": 1
+            },
+            "ID_AFECTADO": {
+                "type": "integer",
+                "minLength": 1
+            },
+            "FECHA_INICIAL": {
+                "type": "string",
+                "minLength": 1
+            },
+            "FECHA_FINAL": {
+                "type": "string",
+                "minLength": 1
+            },
+            "ID_PERIODO": {
+                "type": "integer",
+                "minLength": 1
+            },
+            "ID_ARBOL": {
+                "type": "string",
+                "minLength": 1
+            },
+            "ID_MOTOR": {
+                "type": "string",
+                "minLength": 1
+            },
+            "ID_TIPO_ACTIVIDAD_ARBOL": {
+                "type": "integer",
+                "minLength": 1
+            },
+            "ID_TIPO_ACTIVIDAD_MOTOR": {
+                "type": "integer",
+                "minLength": 1
+            }
+        },
+        "required": [
+            "NUM_RESULTADOS",
+            "PAGINA_ACTUAL",
+            "ID_USUARIO"
+        ]
+    },
+    "get_activity_type": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "type": "object",
+        "properties": {
+            "ID_MODULO": {
+                "type": "integer",
+                "minLength": 1
+            },
+            "status": {
+                "type": "integer",
+                "enum": [0, 1, 2],
+                "minLength": 1
+            }
+        },
+        "required": [
+            "ID_MODULO"
+        ]
+    },
+    "get_activity": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "type": "object",
+        "properties": {
+            "ID_ACTIVIDAD": {
+                "type": "integer",
+                "minLength": 1
+            }
+        },
+        "required": [ "ID_ACTIVIDAD" ]
+    }
+}

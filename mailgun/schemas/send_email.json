@@ -1,0 +1,42 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "properties": {
+    "to": {
+      "type": "string",
+      "format": "email"
+    },
+    "subject": {
+      "type": "string",
+      "maxLength": 50
+    },
+    "body": {
+      "type": "string"
+    },
+    "files": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "route": {
+            "type": "string"
+          }
+        },
+        "required": ["name", "route"]
+      }
+    },
+    "is_html": {
+      "type": "boolean"
+    },
+    "gestion_id": {
+      "type": "integer"
+    },
+    "client_id": {
+      "type": "integer"
+    }
+  },
+  "required": ["to", "subject", "body"]
+}

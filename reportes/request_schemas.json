@@ -1,0 +1,236 @@
+{
+    "get_siniestros": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "type": "object",
+        "properties": {
+            "num_resultados": {
+                "type": "integer",
+                "minLength": 1
+            },
+            "pagina_actual": {
+                "type": "integer",
+                "minLength": 1
+            },
+            "no_siniestro": {
+                "type": "integer",
+                "minLength": 1,
+                "maxLength": 10
+            },
+            "departamento": {
+                "type": "integer",
+                "minLength": 1
+            },
+            "ciudad": {
+                "type": "integer",
+                "minLength": 1
+            },
+            "tipo_fecha": {
+                "type": "integer",
+                "minLength": 1
+            },
+            "fecha_inicial": {
+                "type": "string",
+                "minLength": 1
+            },
+            "fecha_final": {
+                "type": "string",
+                "minLength": 1
+            },
+            "id_usuario": {
+                "type": "integer"
+            }
+        },
+        "required": [
+            "num_resultados",
+            "pagina_actual",
+            "id_usuario"
+        ]
+    },
+    "get_cities": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "type": "object",
+        "properties": {
+            "id_departamento": {
+                "type": "integer",
+                "minLength": 1
+            }
+        },
+        "required": [
+            "id_departamento"
+        ]
+    },
+    "receive_insert": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "type": "object",
+        "properties": {
+            "id_request": {
+                "type": "integer",
+                "minLength": 1,
+                "maxLength": 20
+            },
+            "id_usuario": {
+                "type": "integer",
+                "minLength": 1
+            }
+        },
+        "required": [
+            "id_request",
+            "id_usuario"
+        ]
+    },
+    "download_report": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "type": "object",
+        "properties": {
+            "id_request": {
+                "type": "integer",
+                "minLength": 1,
+                "maxLength": 20
+            },
+            "id_usuario": {
+                "type": "integer"
+            }
+        },
+        "required": [
+            "id_request",
+            "id_usuario"
+        ]
+    },
+    "get_reglas": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "type": "object",
+        "properties": {
+            "nombre_regla": {
+                "type": "string",
+                "minLength": 1
+            },
+            "num_resultados": {
+                "type": "integer",
+                "minLength": 1
+            },
+            "pagina_actual": {
+                "type": "integer",
+                "minLength": 1
+            },
+            "id_usuario": {
+                "type": "integer"
+            }
+        },
+        "required": [
+            "num_resultados",
+            "pagina_actual",
+            "id_usuario"
+        ]
+    },
+    "generar_reporte": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "type": "object",
+        "properties": {
+            "anio": {
+                "type": "integer",
+                "minLength": 1
+            },
+            "mes": {
+                "type": "integer",
+                "minLength": 1
+            },
+            "id_usuario": {
+                "type": "integer",
+                "minLength": 1
+            }
+        },
+        "required": [
+            "anio",
+            "mes",
+            "id_usuario"
+        ]
+    },
+    "validar_reporte_mensual": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "type": "object",
+        "properties": {
+            "id_reporte": {
+                "type": "integer",
+                "minLength": 1
+            },
+            "id_usuario": {
+                "type": "integer"
+            }
+        },
+        "required": [
+            "id_reporte",
+            "id_usuario"
+        ]
+    },
+    "generar_mensual_reglas": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "type": "object",
+        "properties": {
+            "tipo_regla":{
+                "type": "integer",
+                "minLength": 1
+            },
+            "anio": {
+                "type": "integer",
+                "minLength": 1
+            },
+            "mes": {
+                "type": "integer",
+                "minLength": 1
+            },
+            "departamento": {
+                "type": "integer",
+                "minLength": 1
+            },
+            "usuario": {
+                "type": "integer"
+            }
+        },
+        "required": [
+            "anio",
+            "mes",
+            "usuario"
+        ]
+    },
+    "validar_reporte_reglas": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "type": "object",
+        "properties": {
+            "id_reporte": {
+                "type": "integer",
+                "minLength": 1
+            },
+            "id_usuario": {
+                "type": "integer"
+            }
+        },
+        "required": [
+            "id_reporte",
+            "id_usuario"
+        ]
+    },
+    "descargar_reporte_mensual": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "type": "object",
+        "properties": {
+            "id_reporte": {
+                "type": "integer",
+                "minLength": 1
+            },
+            "id_modulo": {
+                "type": "integer",
+                "enum": [10, 11],
+                "minLength": 2
+            },
+            "id_usuario": {
+                "type": "integer",
+                "minLength": 1
+            }
+        },
+        "required": [
+            "id_reporte",
+            "id_modulo",
+            "id_usuario"
+        ]
+    }
+}

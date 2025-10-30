@@ -1,0 +1,85 @@
+service: allianz-orq-motores
+frameworkVersion: '3'
+
+package:
+  patterns:
+    - "!node_modules/**"
+    - "!package-lock.json"
+    - "!package.json"
+
+provider:
+  name: aws
+  runtime: python3.9
+  stage: ${sls:stage}
+  region: us-east-1
+  timeout: 25
+  layers:
+    - arn:aws:lambda:${aws:region}:${aws:accountId}:layer:DependenciasOrquestador:${self:params.envSecret.orqLayerVersion}
+
+  iam:
+    role:
+      statements:
+        - Effect: "Allow"
+          Action:
+            - "secretsmanager:GetSecretValue"
+          Resource: "*"
+  environment:
+    STAGE: ${self:provider.stage}
+
+  vpc:
+    securityGroupIds:
+      - ${self:params.envSecret.securityGroupId}
+    subnetIds:
+      - ${self:params.envSecret.subnetId1}
+      - ${self:params.envSecret.subnetId2}
+
+  httpApi:
+    authorizers:
+      someJwtAuthorizerOrq:
+        type: jwt
+        identitySource: $request.header.Authorization
+        issuerUrl: https://cognito-idp.${aws:region}.amazonaws.com/${self:params.envSecret.cognitoPoolId}
+        audience: ${self:params.envSecret.clienteId}
+    cors: true
+params:
+  envSecret: ${ssm:/aws/reference/secretsmanager/${self:provider.stage}/secret-orquestador}
+
+functions:
+  crear-motor:
+    handler: handler.create_motor
+    events:
+      - httpApi:
+          path: /create_motor
+          method: post
+          authorizer:
+            name: someJwtAuthorizerOrq
+  
+  select_motor:
+    handler: handler.select_motor
+    events:
+      - httpApi:
+          path: /select_motor
+          method: post
+          authorizer:
+            name: someJwtAuthorizerOrq
+
+  delete-motor:
+    handler: handler.delete_motor
+    events:
+      - httpApi:
+          path: /delete_motor
+          method: post
+          authorizer:
+            name: someJwtAuthorizerOrq
+
+  delete-arbol:
+    handler: handler.delete_arbol
+    events:
+      - httpApi:
+          path: /delete_arbol
+          method: post
+          authorizer:
+            name: someJwtAuthorizerOrq
+
+# plugins:
+#   - serverless-offline

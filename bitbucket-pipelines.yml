@@ -1,0 +1,38 @@
+image: php:7.4-cli
+
+definitions:
+  steps:
+    - step: &sonar-analysis
+        name: SonarQube analysis
+        caches:
+          - composer
+          - sonar
+
+        script:
+          - pipe: sonarsource/sonarqube-scan:2.0.0
+            variables:
+              SONAR_HOST_URL: ${SONAR_HOST_URL} 
+              SONAR_TOKEN: ${SONAR_TOKEN}
+    - step: &check-qualitygate
+        name: Check Quality Gate on SonarQube
+        max-time: 5
+        script:
+          - pipe: sonarsource/sonarqube-quality-gate:1.1.0
+            variables:
+              SONAR_HOST_URL: ${SONAR_HOST_URL}
+              SONAR_TOKEN: ${SONAR_TOKEN}
+
+  caches:
+    composer: /root/.composer/cache
+    sonar: ~/.sonar
+
+clone:
+  depth: full
+
+options:
+  size: 2x
+
+pipelines:
+  default:
+    - step: *sonar-analysis
+    - step: *check-qualitygate

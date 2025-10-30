@@ -1,0 +1,96 @@
+service: conexionAllianz
+frameworkVersion: "3"
+
+package:
+  patterns:
+    - "!node_modules/**"
+    - "!package-lock.json"
+    - "!package.json"
+
+provider:
+  name: aws
+  runtime: python3.9
+  # profile: deploy
+  stage: ${sls:stage}
+  region: us-east-1
+  deploymentBucket: 
+    name: ${self:params.envSecret.bucket_deploy}
+  timeout: 25
+  layers:
+    - arn:aws:lambda:${aws:region}:${aws:accountId}:layer:DependenciasOrquestador:${self:params.envSecret.orqLayerVersion}
+  
+  iam:
+    role:
+      statements:
+        - Effect: "Allow"
+          Action:
+            - "secretsmanager:GetSecretValue"
+            - "s3:*"
+          Resource: "*"
+        - Effect: "Allow"
+          Action:
+            - lambda:InvokeFunction
+          Resource: "*" 
+  environment:
+    STAGE: ${self:provider.stage}
+    REGION: ${self:provider.region}
+
+  vpc:
+    securityGroupIds:
+      - ${self:params.envSecret.securityGroupId}
+    subnetIds:
+      - ${self:params.envSecret.subnetId1}
+      - ${self:params.envSecret.subnetId2}
+
+  httpApi:
+    authorizers:
+      someJwtAuthorizerOrq:
+        type: jwt
+        identitySource: $request.header.Authorization
+        issuerUrl: https://cognito-idp.${aws:region}.amazonaws.com/${self:params.envSecret.cognitoPoolId}
+        audience: ${self:params.envSecret.clienteId}
+    cors: true
+params:
+  envSecret: ${ssm:/aws/reference/secretsmanager/${self:provider.stage}/secret-orquestador}
+
+functions:
+  receive_request:
+    handler: handler.receive_request
+    events:
+      - httpApi:
+          path: /receive_request
+          method: post
+          authorizer:
+            name: someJwtAuthorizerOrq
+
+  get_tokens_orquestador:
+    handler: handler.get_tokens_orquestador
+    environment:
+      COGNITO_CLIENT_ID: ${self:params.envSecret.clienteId}
+    events:
+      - httpApi:
+          path: /get_tokens_orquestador
+          method: post
+
+  service_inif:
+    handler: handlers/services/inif.start
+    maximumRetryAttempts: 0
+    timeout: 900
+
+
+# resources:
+#   Resources:
+#     CognitoUserPoolAllianzOrq:
+#       Type: AWS::Cognito::UserPool
+#       Properties:
+#         UserPoolName: allianz-orq # Cambiar
+
+#     CognitoUserPoolClient:
+#       Type: AWS::Cognito::UserPoolClient
+#       Properties:
+#         ClientName: allianz-orq-client # Cambiar
+#         UserPoolId:
+#           Ref: CognitoUserPoolAllianzOrq
+#         ExplicitAuthFlows:
+#           - "ALLOW_USER_PASSWORD_AUTH"
+#           - "ALLOW_REFRESH_TOKEN_AUTH"

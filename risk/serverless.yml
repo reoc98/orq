@@ -1,0 +1,75 @@
+service: allianz-orq-risk
+frameworkVersion: "3"
+
+package:
+  patterns:
+    - "!node_modules/**"
+    - "!package-lock.json"
+    - "!package.json"
+
+provider:
+  name: aws
+  runtime: python3.9
+  # profile: deploy
+  stage: ${sls:stage}
+  region: us-east-1
+  timeout: 25
+  layers:
+    - arn:aws:lambda:${aws:region}:${aws:accountId}:layer:DependenciasOrquestador:${self:params.envSecret.orqLayerVersion}
+  
+  iam:
+    role:
+      statements:
+        - Effect: "Allow"
+          Action:
+            - "secretsmanager:GetSecretValue"
+          Resource: "*"
+        - Effect: "Allow"
+          Action:
+            - lambda:InvokeFunction
+          Resource: "*" 
+  environment:
+    STAGE: ${self:provider.stage}
+    REGION: ${self:provider.region}
+
+  vpc:
+    securityGroupIds:
+      - ${self:params.envSecret.securityGroupId}
+    subnetIds:
+      - ${self:params.envSecret.subnetId1}
+      - ${self:params.envSecret.subnetId2}
+
+  httpApi:
+    authorizers:
+      someJwtAuthorizerOrq:
+        type: jwt
+        identitySource: $request.header.Authorization
+        issuerUrl: https://cognito-idp.${aws:region}.amazonaws.com/${self:params.envSecret.cognitoPoolId}
+        audience: ${self:params.envSecret.clienteId}
+    cors: true
+params:
+  envSecret: ${ssm:/aws/reference/secretsmanager/${self:provider.stage}/secret-orquestador}
+
+functions:
+  risk:
+    handler: handler.risk
+    events:
+      - httpApi:
+          path: /risk
+          method: post
+          authorizer:
+            name: someJwtAuthorizerOrq
+
+  procesoRisk:
+    handler: handler.procesoRisk
+    timeout: 900
+
+  validarRisk:
+    handler: handler.validarRisk
+    events:
+      - schedule:
+          enabled: true
+          rate: cron(15/15 04-16 ? * * *)
+    timeout: 900
+    maximumRetryAttempts: 0
+        

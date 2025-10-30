@@ -1,0 +1,128 @@
+service: allianz-orq-login
+frameworkVersion: '3'
+
+package:
+  patterns:
+    - "!dev_env/**"
+    - "!.serverless/**"
+    - "!node_modules/**"
+    - "!.vscode/**"
+    - "!__pycache__/**"
+    - "!package-lock.json"
+    - "!package.json"
+    - "!RUN_MODULE.bat"
+
+provider:
+  name: aws
+  runtime: python3.9
+  # profile: deploy
+  stage: ${sls:stage}
+  region: us-east-1
+  timeout: 25
+  layers:
+    - arn:aws:lambda:${aws:region}:${aws:accountId}:layer:DependenciasOrquestador:${self:params.envSecret.orqLayerVersion}
+  
+  iam:
+    role:
+      statements:
+        - Effect: "Allow"
+          Action:
+            - "secretsmanager:GetSecretValue"
+            - "cognito-idp:AdminDeleteUser"
+            - "cognito-idp:AdminSetUserPassword"
+          Resource: "*"
+        - Effect: Allow
+          Action:
+            - lambda:InvokeFunction
+            - "s3:*"
+          Resource: "*"
+  
+  httpApi:
+    authorizers:
+      someJwtAuthorizerOrq:
+        type: jwt
+        identitySource: $request.header.Authorization
+        issuerUrl: https://cognito-idp.${aws:region}.amazonaws.com/${self:params.envSecret.cognitoPoolId}
+        audience: ${self:params.envSecret.clienteId}
+    cors: true
+  
+  vpc:
+    securityGroupIds:
+      - ${self:params.envSecret.securityGroupId}
+    subnetIds:
+      - ${self:params.envSecret.subnetId1}
+      - ${self:params.envSecret.subnetId2}
+  
+  environment:
+    SERVICE: ${self:service}
+    STAGE: ${self:provider.stage}
+    REGION: ${self:provider.region}
+    COGNITO_CLIENT_ID: ${self:params.envSecret.clienteId}
+    COGNITO_USER_POOL_ID: ${self:params.envSecret.cognitoPoolId}
+
+params:
+  envSecret: ${ssm:/aws/reference/secretsmanager/${self:provider.stage}/secret-orquestador}
+
+functions:
+  send_email_recover_password:
+      handler: handler.send_email_recover_password
+      events:
+        - httpApi:
+            path: /send_email_recover_password
+            method: post
+
+  recover_password:
+      handler: handler.recover_password
+      events:
+        - httpApi:
+            path: /recover_password
+            method: post
+
+  valid_link_recovery_pass:
+      handler: handler.valid_link_recovery_pass
+      events:
+        - httpApi:
+            path: /valid_link_recovery_pass
+            method: post
+
+  get_modules_by_user:
+      handler: handler.get_modules_by_user
+      events:
+        - httpApi:
+            path: /get_modules_by_user
+            method: post
+            authorizer:
+              name: someJwtAuthorizerOrq
+  
+  get_submodules_by_user:
+      handler: handler.get_submodules_by_user
+      events:
+        - httpApi:
+            path: /get_submodules_by_user
+            method: post
+            authorizer:
+              name: someJwtAuthorizerOrq
+
+  all_orq:
+    handler: handler.login
+    events:
+      - httpApi:
+          path: /
+          method: post
+
+  all_refresh:
+    handler: handler.refresh_token
+    events:
+      - httpApi:
+          path: /refresh
+          method: post
+
+  all_logout:
+    handler: handler.logout
+    events:
+      - httpApi:
+          path: /logout
+          method: post
+
+# plugins:
+#   - serverless-offline
