@@ -6,6 +6,7 @@ from models.RequestsEnviados import RequestsEnviados
 from models.EjecucionMotor import EjecucionMotor, datetime
 from models.ArbolEjecucion import ArbolEjecucion
 from models.RiskConsulta import RiskConsulta
+from models.ServiceInif import ServiceInif
 from clases.Database import Database
 from utils.Aws import Aws, os
 import json
@@ -69,7 +70,7 @@ class Ejecucion():
     # obtenemos la consulta de risk en base al documento
     def obtenerConsulaRisk(self, id_request, documento):
         db = Database('dbr')
-        try: 
+        try:
             isset = db.session.query(RiskConsulta).filter_by(
                 numero_documento = documento).filter_by(
                 id_request = id_request).filter_by(
@@ -85,6 +86,26 @@ class Ejecucion():
         finally:
             db.session.invalidate()
             db.session.close()
+
+    def obtener_service_inif(self, id_request, tipo_figura, numero_documento):
+        db = Database('dbr').session
+        try:
+            consulta = db.query(
+                ServiceInif.response
+            ).filter_by(
+                id_request_orq = id_request,
+                tipo_figura = tipo_figura,
+                numero_documento = numero_documento
+            ).order_by(
+                ServiceInif.id.desc()
+            ).first()
+
+            return consulta
+        except Exception as e:
+            raise ValueError(str(e))
+        finally:
+            db.invalidate()
+            db.close()
 
     # Obtenemos los motores activos a ejecutar
     def obtenerMotores(self):
